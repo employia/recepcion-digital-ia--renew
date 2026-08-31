@@ -12,6 +12,15 @@ import {
 import { useMetrics } from "@/lib/hooks"
 import { SkeletonList, ReadOnlyNote } from "./shared"
 
+// Recharts renders these as SVG presentation attributes, where CSS custom
+// properties (var(--x)) do NOT resolve — so we use explicit theme colors.
+const C = {
+  accent: "oklch(0.6 0.07 215)",
+  chart2: "oklch(0.62 0.09 150)",
+  axis: "oklch(0.55 0.008 75)",
+  grid: "oklch(0.89 0.006 85)",
+}
+
 export function MetricsModule() {
   const { data, isLoading } = useMetrics()
 
@@ -36,21 +45,21 @@ export function MetricsModule() {
             <AreaChart data={operation.trend} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
               <defs>
                 <linearGradient id="opFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                  <stop offset="0%" stopColor={C.accent} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={C.accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                tick={{ fontSize: 10, fill: C.axis }}
               />
-              <Tooltip content={<MiniTooltip suffix=" conv." />} cursor={{ stroke: "var(--border)" }} />
+              <Tooltip content={<MiniTooltip suffix=" conv." />} cursor={{ stroke: C.grid }} />
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="var(--accent)"
+                stroke={C.accent}
                 strokeWidth={2}
                 fill="url(#opFill)"
               />
@@ -74,10 +83,10 @@ export function MetricsModule() {
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                tick={{ fontSize: 10, fill: C.axis }}
               />
-              <Tooltip content={<MiniTooltip suffix=" citas" />} cursor={{ fill: "var(--secondary)" }} />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="var(--chart-2)" />
+              <Tooltip content={<MiniTooltip suffix=" citas" />} cursor={{ fill: "oklch(0.93 0.006 85)" }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} fill={C.chart2} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

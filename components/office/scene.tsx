@@ -8,8 +8,6 @@ import { Room } from "./room"
 export function Scene() {
   return (
     <group>
-      <SoftShadows size={26} samples={12} focus={0.7} />
-
       {/* Warm key light from the window side */}
       <directionalLight
         position={[-6, 9, -4]}
