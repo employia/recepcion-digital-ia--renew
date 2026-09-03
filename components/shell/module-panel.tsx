@@ -15,15 +15,16 @@ import { AccountModule } from "@/components/modules/account"
 const META: Record<Exclude<ModuleId, "office">, { title: string; subtitle: string; employee?: string }> = {
   conversations: { title: "Conversaciones", subtitle: "Atención de Valentina", employee: "Valentina · Recepción" },
   agenda: { title: "Agenda", subtitle: "Citas gestionadas por Carlos", employee: "Carlos · Agenda" },
-  patients: { title: "Pacientes", subtitle: "Datos y CRM del Secretario", employee: "Secretario · Datos" },
+  patients: { title: "Pacientes", subtitle: "Datos y CRM de Elena", employee: "Elena · Datos" },
   metrics: { title: "Métricas", subtitle: "Rendimiento diario del sistema" },
-  escalations: { title: "Escalamientos", subtitle: "Casos en supervisión", employee: "Supervisor · Supervisión" },
+  escalations: { title: "Escalamientos", subtitle: "Casos en supervisión", employee: "Steven · Supervisión" },
   account: { title: "Cuenta", subtitle: "Sesión y preferencias" },
 }
 
 export function ModulePanel() {
   const { activeModule, closeModule, branchId } = useApp()
-  const branch = BRANCHES.find((b) => b.id === branchId)!
+  const branch = BRANCHES.find((b) => b.id === branchId)
+  const branchName = branch?.name ?? "Todas las sucursales"
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -70,7 +71,7 @@ export function ModulePanel() {
                     {meta.title}
                   </h2>
                   <p className="truncate text-xs text-muted-foreground">
-                    {meta.subtitle} · {branch.name}
+                    {meta.subtitle} · {branchName}
                   </p>
                 </div>
                 <button

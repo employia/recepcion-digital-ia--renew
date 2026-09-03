@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Check, ChevronDown, MapPin } from "lucide-react"
-import { BRANCHES } from "@/lib/mock-data"
+import { ALL_BRANCHES_BRANCH, BRANCHES } from "@/lib/mock-data"
 import { useApp } from "@/lib/store"
+
+// The selector lists every real branch plus a combined "Todas las sucursales" view.
+const OPTIONS = [...BRANCHES, ALL_BRANCHES_BRANCH]
 
 export function BranchSelector() {
   const { branchId, setBranchId } = useApp()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const current = BRANCHES.find((b) => b.id === branchId)!
+  const current = OPTIONS.find((b) => b.id === branchId) ?? OPTIONS[0]
 
   useEffect(() => {
     function onClick(e: MouseEvent) {

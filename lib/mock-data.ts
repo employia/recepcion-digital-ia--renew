@@ -9,10 +9,19 @@ import type {
 } from "./types"
 
 export const BRANCHES: Branch[] = [
-  { id: "alma-rosa-1", name: "Alma Rosa 1", label: "Renew · Alma Rosa 1" },
+  { id: "alma-rosa-1-principal", name: "Alma Rosa I Principal", label: "Renew · Alma Rosa I Principal" },
+  { id: "alma-rosa-1-ampliacion", name: "Alma Rosa I Ampliación", label: "Renew · Alma Rosa I Ampliación" },
+  { id: "los-mameyes", name: "Los Mameyes", label: "Renew · Los Mameyes" },
   { id: "san-isidro", name: "San Isidro", label: "Renew · San Isidro" },
-  { id: "naco", name: "Naco", label: "Renew · Naco" },
 ]
+
+// Synthetic option that aggregates every branch into a single combined view.
+export const ALL_BRANCHES_ID = "all"
+export const ALL_BRANCHES_BRANCH: Branch = {
+  id: ALL_BRANCHES_ID,
+  name: "Todas las sucursales",
+  label: "Renew · Todas las sucursales",
+}
 
 export const EMPLOYEES: Employee[] = [
   {
@@ -23,6 +32,8 @@ export const EMPLOYEES: Employee[] = [
     station: [-2.6, -2.2],
     rotation: Math.PI * 0.25,
     accent: "oklch(0.62 0.09 200)",
+    model: "/models/valentina-empleada.glb",
+    status: "working",
   },
   {
     id: "carlos",
@@ -32,24 +43,30 @@ export const EMPLOYEES: Employee[] = [
     station: [2.6, -2.2],
     rotation: -Math.PI * 0.25,
     accent: "oklch(0.6 0.1 150)",
+    model: "/models/carlos-empleado.glb",
+    status: "working",
   },
   {
-    id: "secretario",
-    name: "Secretario",
+    id: "elena",
+    name: "Elena",
     role: "Secretaría · Datos",
     module: "patients",
     station: [-2.6, 2.2],
     rotation: Math.PI * 0.75,
     accent: "oklch(0.58 0.08 60)",
+    model: "/models/elena-empleada.glb",
+    status: "resting",
   },
   {
-    id: "supervisor",
-    name: "Supervisor",
+    id: "steven",
+    name: "Steven",
     role: "Supervisión",
     module: "escalations",
     station: [2.6, 2.2],
     rotation: -Math.PI * 0.75,
     accent: "oklch(0.6 0.12 30)",
+    model: "/models/steven-empleado.glb",
+    status: "working",
   },
 ]
 

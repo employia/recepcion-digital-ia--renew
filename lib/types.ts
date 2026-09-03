@@ -10,7 +10,10 @@ export type ModuleId =
   | "escalations"
   | "account"
 
-export type EmployeeId = "valentina" | "carlos" | "secretario" | "supervisor"
+export type EmployeeId = "valentina" | "carlos" | "elena" | "steven"
+
+// Simulated presence state for each employee.
+export type EmployeeStatus = "working" | "resting"
 
 export interface Employee {
   id: EmployeeId
@@ -22,6 +25,10 @@ export interface Employee {
   // Rotation of the person/desk in radians around Y
   rotation: number
   accent: string
+  // URL of the fused GLB model (person + chair + desk as one piece)
+  model: string
+  // Simulated presence state
+  status: EmployeeStatus
 }
 
 export interface Branch {
