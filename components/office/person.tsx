@@ -37,6 +37,18 @@ export function EmployeeModel({
       // on every submesh (hair, buttons, accessories) doubled the shadow-pass
       // mesh count on all four avatars for no visible difference.
       child.castShadow = true
+      // This model must NOT be part of hover raycasting. EmployeeZone
+      // already has a stable, fixed-size invisible hitbox for that. If the
+      // avatar's own geometry also receives pointer events, a feedback loop
+      // appears: hovering scales this exact model up 1% (see the group
+      // below) -> its silhouette shifts under the cursor -> the raycaster
+      // can lose the intersection -> pointerOut fires -> it scales back
+      // down -> the cursor is back inside -> pointerOver fires again ->
+      // repeat, every render. That's the "office flickers when I hover an
+      // employee" bug. Disabling raycast on every submesh here removes the
+      // model entirely from hit-testing, so only the fixed hitbox — which
+      // never changes size — drives hover/click.
+      child.raycast = () => null
     })
     const box = new Box3().setFromObject(object)
     const size = new Vector3()
