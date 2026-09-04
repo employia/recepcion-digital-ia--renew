@@ -45,9 +45,14 @@ export function Plant({
 export function Room() {
   return (
     <group>
-      {/* Floor */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <boxGeometry args={[9.4, 9.4, 0.001]} />
+      {/* Floor — a true plane (zero thickness), not a thin box. A box here
+          previously had front/back faces only 0.001 units apart, which is
+          the same order of magnitude as the directional light's shadow bias
+          (-0.0004). The shadow map couldn't stably decide which face was
+          "in shadow", causing visible flicker (shadow acne) independent of
+          the camera. A plane has no second face to fight with. */}
+      <mesh position={[0, 0.0005, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[9.4, 9.4]} />
         <meshStandardMaterial color={FLOOR} roughness={0.9} />
       </mesh>
       {/* Floor slab thickness / edge */}
