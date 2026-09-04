@@ -1,6 +1,6 @@
 "use client"
 
-import { ContactShadows, Environment, SoftShadows } from "@react-three/drei"
+import { ContactShadows, Environment } from "@react-three/drei"
 import { EMPLOYEES } from "@/lib/mock-data"
 import { EmployeeZone } from "./employee-zone"
 import { Room } from "./room"
@@ -14,7 +14,10 @@ export function Scene() {
         intensity={2.1}
         color="#fff3e0"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        // 1024 instead of 2048: at this room scale and isometric distance
+        // the extra resolution isn't visually distinguishable, but it's a
+        // 4x reduction in shadow-map fill/fragment cost.
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-7}
         shadow-camera-right={7}
         shadow-camera-top={7}
@@ -32,13 +35,21 @@ export function Scene() {
         <EmployeeZone key={emp.id} employee={emp} index={i} />
       ))}
 
+      {/* frames left at its default (re-bakes on every rendered frame, not
+          "once"): with frameloop="demand" on the Canvas, rendered frames now
+          only happen when something actually changes (each avatar's async
+          GLB finishing load, hover, zoom) instead of at 60fps forever — so
+          this now naturally bakes once per real change and then goes idle,
+          without going stale before every avatar has finished loading (a
+          fixed frames=1 would bake before the last Suspense boundary
+          resolves and then never update again). */}
       <ContactShadows
         position={[0, 0.012, 0]}
         opacity={0.32}
         scale={12}
         blur={2.4}
         far={4}
-        resolution={1024}
+        resolution={512}
         color="#4a4436"
       />
 

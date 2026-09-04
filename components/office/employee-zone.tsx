@@ -4,7 +4,7 @@ import { Suspense, useState } from "react"
 import { Html } from "@react-three/drei"
 import type { ThreeEvent } from "@react-three/fiber"
 import type { Employee } from "@/lib/types"
-import { useApp } from "@/lib/store"
+import { useApp, useHover } from "@/lib/store"
 import { EmployeeModel } from "./person"
 import { Workstation } from "./workstation"
 import { AvatarErrorBoundary } from "./avatar-error-boundary"
@@ -51,7 +51,8 @@ const STATUS_META = {
 } as const
 
 export function EmployeeZone({ employee, index }: { employee: Employee; index: number }) {
-  const { openModule, hoveredEmployee, setHoveredEmployee } = useApp()
+  const { openModule } = useApp()
+  const { hoveredEmployee, setHoveredEmployee } = useHover()
   const [x, z] = employee.station
   // Orient the whole station so the seated employee faces the room center.
   const rotationY = Math.atan2(-x, -z)

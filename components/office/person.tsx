@@ -32,8 +32,11 @@ export function EmployeeModel({
   const { object, scale, offset } = useMemo(() => {
     const object = scene.clone(true)
     object.traverse((child: Object3D) => {
+      // Employees cast shadows onto the floor (visually important), but
+      // don't meaningfully shadow each other at this spacing — receiveShadow
+      // on every submesh (hair, buttons, accessories) doubled the shadow-pass
+      // mesh count on all four avatars for no visible difference.
       child.castShadow = true
-      child.receiveShadow = true
     })
     const box = new Box3().setFromObject(object)
     const size = new Vector3()
