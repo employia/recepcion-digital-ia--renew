@@ -13,17 +13,18 @@ export function OfficeView() {
       <HoverProvider>
         <Canvas
           shadows
-          // The scene is fully static: no useFrame/animation exists anywhere
-          // in this codebase. "always" (the default) re-renders every frame
-          // forever for nothing. "demand" only renders when something
-          // actually changes — OrbitControls invalidates on its own on
-          // zoom, and R3F auto-invalidates whenever a prop it manages
-          // changes (hover scale/color, tooltip show/hide, model load).
-          frameloop="demand"
-          // 1.5 instead of 2: on high-density (retina/4K) screens, dpr 2
-          // roughly doubles pixel count vs 1.5 for a difference that isn't
-          // perceptible at this isometric scale, while meaningfully cutting
-          // fragment/shadow-pass cost — the main lever on constrained GPUs.
+          // Reverted from frameloop="demand" back to the default "always".
+          // Demand mode only redraws when something explicitly invalidates,
+          // and depends on EVERY visual-affecting change doing that
+          // correctly. After three separate verified/deployed fixes
+          // (avatar model size, camera near/far, floor shadow-acne, hover
+          // raycast/scale feedback loop) the flicker still persisted and
+          // stayed correlated with hover specifically — the one thing
+          // "demand" mode treats specially. Rather than keep guessing at
+          // invalidation edge cases I can't see rendered, trade back some
+          // idle GPU usage for "always"'s simpler, predictable behavior:
+          // every frame is drawn in full, so there's no stale/incomplete
+          // frame for anything to flicker between.
           dpr={[1, 1.5]}
           orthographic
           // near/far tightened to the room's actual depth (camera is ~15 units
