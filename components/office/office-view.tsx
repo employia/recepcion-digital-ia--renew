@@ -13,7 +13,13 @@ export function OfficeView() {
         shadows
         dpr={[1, 2]}
         orthographic
-        camera={{ position: [9, 8.5, 9], zoom: 78, near: -50, far: 100 }}
+        // near/far tightened to the room's actual depth (camera is ~15 units
+        // from center, room half-extent ~4.7). The previous -50..100 range
+        // (150 units) starved the depth buffer of precision exactly where the
+        // floor, rug and contact-shadow plane sit within 0.012 units of each
+        // other (y=0 / 0.006 / 0.012), causing visible z-fighting flicker —
+        // worse while zooming, since minZoom/maxZoom re-derives the frustum.
+        camera={{ position: [9, 8.5, 9], zoom: 78, near: 1, far: 30 }}
         gl={{ antialias: true, preserveDrawingBuffer: false }}
       >
         <color attach="background" args={["#f2efe9"]} />
