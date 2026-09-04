@@ -7,6 +7,24 @@ import type { Employee } from "@/lib/types"
 import { useApp } from "@/lib/store"
 import { EmployeeModel } from "./person"
 import { Workstation } from "./workstation"
+import { AvatarErrorBoundary } from "./avatar-error-boundary"
+
+/** Simple stand-in silhouette shown if an employee's GLB fails to load, so
+ * the desk/hitbox/label still work and the rest of the office is unaffected. */
+function AvatarFallback({ accent }: { accent: string }) {
+  return (
+    <group position={[0, 0, 0.15]}>
+      <mesh position={[0, 0.95, 0]} castShadow>
+        <capsuleGeometry args={[0.22, 0.75, 4, 12]} />
+        <meshStandardMaterial color={accent} roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 1.55, 0]} castShadow>
+        <sphereGeometry args={[0.16, 16, 16]} />
+        <meshStandardMaterial color={accent} roughness={0.85} />
+      </mesh>
+    </group>
+  )
+}
 
 // Per-model tuning. Each fused GLB has a different original scale, pivot and
 // facing, so we tune height / rotation and where its desk surface sits (for
@@ -83,14 +101,16 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
         onPointerUp={() => setPressed(false)}
         onClick={handleClick}
       >
-        <Suspense fallback={null}>
-          <EmployeeModel
-            model={employee.model}
-            targetHeight={cfg.targetHeight}
-            rotationY={cfg.rotationY}
-            active={active}
-          />
-        </Suspense>
+        <AvatarErrorBoundary employeeId={employee.id} fallback={<AvatarFallback accent={employee.accent} />}>
+          <Suspense fallback={null}>
+            <EmployeeModel
+              model={employee.model}
+              targetHeight={cfg.targetHeight}
+              rotationY={cfg.rotationY}
+              active={active}
+            />
+          </Suspense>
+        </AvatarErrorBoundary>
         {/* invisible larger hitbox so hovering is forgiving */}
         <mesh position={[0, 0.9, 0.2]} visible={false}>
           <boxGeometry args={[1.6, 1.9, 1.6]} />
