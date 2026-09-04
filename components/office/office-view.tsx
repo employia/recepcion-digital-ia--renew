@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { Loader2 } from "lucide-react"
 import { HoverProvider } from "@/lib/store"
+import { GlRecoveryWatcher } from "./gl-recovery-watcher"
 import { Scene } from "./scene"
 
 export function OfficeView() {
@@ -35,6 +36,7 @@ export function OfficeView() {
           camera={{ position: [9, 8.5, 9], zoom: 78, near: 1, far: 30 }}
           gl={{ antialias: true, preserveDrawingBuffer: false }}
         >
+          <GlRecoveryWatcher />
           <color attach="background" args={["#f2efe9"]} />
           <Suspense fallback={null}>
             <Scene />
