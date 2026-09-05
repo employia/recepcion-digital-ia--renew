@@ -43,6 +43,17 @@ export function OfficeView() {
     }
   }, [])
 
+  // Fallback safety net: if the context is ever lost, downgrade regardless
+  // of whether isSoftwareRenderer() caught it up front. setLowPower is
+  // referentially stable (useState setter), so this never changes identity
+  // and won't cause GlRecoveryWatcher to re-subscribe its listeners.
+  const handleContextLost = useCallback(() => {
+    setLowPower((prev) => {
+      if (!prev) console.warn("[office] Context lost despite passing software-renderer check — downgrading anyway")
+      return true
+    })
+  }, [])
+
   return (
     <div className="absolute inset-0">
       <HoverProvider>
@@ -75,7 +86,7 @@ export function OfficeView() {
           camera={{ position: [9, 8.5, 9], zoom: 78, near: 1, far: 30 }}
           gl={{ antialias: !lowPower, preserveDrawingBuffer: false }}
         >
-          <GlRecoveryWatcher />
+          <GlRecoveryWatcher onContextLost={handleContextLost} />
           <color attach="background" args={["#f2efe9"]} />
           <Suspense fallback={null}>
             <Scene lowPower={lowPower} />
