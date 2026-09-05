@@ -83,11 +83,17 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
 
   return (
     <group position={[x, 0, z]} rotation={[0, rotationY, 0]}>
-      {/* Soft zone rug to ground each workstation */}
+      {/* Soft zone rug to ground each workstation. Toggling emissiveIntensity
+          instead of swapping the base `color` on hover: it's a strictly
+          cheaper update (touches one uniform, nothing structural about the
+          material changes), which matters when every bit of per-frame cost
+          counts on constrained hardware. Same visual result. */}
       <mesh position={[0, 0.006, 0.45]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[1.35, 40]} />
         <meshStandardMaterial
-          color={active ? "#e9e2d2" : "#e2dbc9"}
+          color="#e2dbc9"
+          emissive="#e9e2d2"
+          emissiveIntensity={active ? 0.5 : 0}
           roughness={0.95}
           transparent
           opacity={0.9}
