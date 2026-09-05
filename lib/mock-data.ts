@@ -31,7 +31,7 @@ export const EMPLOYEES: Employee[] = [
     module: "conversations",
     station: [-2.6, -2.2],
     rotation: Math.PI * 0.25,
-    accent: "oklch(0.62 0.09 200)",
+    accent: "#33969b", // oklch(0.62 0.09 200)
     model: "/models/valentina-empleada.glb",
     status: "working",
   },
@@ -42,7 +42,7 @@ export const EMPLOYEES: Employee[] = [
     module: "agenda",
     station: [2.6, -2.2],
     rotation: -Math.PI * 0.25,
-    accent: "oklch(0.6 0.1 150)",
+    accent: "#519160", // oklch(0.6 0.1 150)
     model: "/models/carlos-empleado.glb",
     status: "working",
   },
@@ -53,7 +53,7 @@ export const EMPLOYEES: Employee[] = [
     module: "patients",
     station: [-2.6, 2.2],
     rotation: Math.PI * 0.75,
-    accent: "oklch(0.58 0.08 60)",
+    accent: "#9d6f48", // oklch(0.58 0.08 60)
     model: "/models/elena-empleada.glb",
     status: "resting",
   },
@@ -64,7 +64,7 @@ export const EMPLOYEES: Employee[] = [
     module: "escalations",
     station: [2.6, 2.2],
     rotation: -Math.PI * 0.75,
-    accent: "oklch(0.6 0.12 30)",
+    accent: "#bd6254", // oklch(0.6 0.12 30)
     model: "/models/steven-empleado.glb",
     status: "working",
   },
