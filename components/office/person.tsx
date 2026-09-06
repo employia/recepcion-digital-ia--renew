@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { useGLTF } from "@react-three/drei"
 import { Box3, Vector3, type Object3D } from "three"
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js"
 
 interface EmployeeModelProps {
   /** Path to the fused GLB (person + chair + desk as one merged piece). */
@@ -30,7 +31,17 @@ export function EmployeeModel({
   const { scene } = useGLTF(model)
 
   const { object, scale, offset } = useMemo(() => {
-    const object = scene.clone(true)
+    // Plain Object3D.clone(true) does NOT rebind SkinnedMesh.skeleton.bones to
+    // the cloned bone hierarchy — it silently keeps pointing at the ORIGINAL
+    // scene's bones. For unrigged models (Valentina/Carlos/Elena) this is a
+    // no-op and scene.clone(true) is fine. For a fully rigged model (Steven's
+    // Sketchfab asset, 76-bone skeleton) it breaks the skin binding: the mesh
+    // renders with garbage/blown-up vertex positions, which is what produced
+    // the giant, distorted avatar and, downstream, a bounding box computed
+    // from that broken geometry (wrong scale/offset for the whole group).
+    // SkeletonUtils.clone correctly re-parents skeletons/bones on clone and
+    // is a safe drop-in for both rigged and unrigged models.
+    const object = cloneSkeleton(scene) as Object3D
     object.traverse((child: Object3D) => {
       // Employees cast shadows onto the floor (visually important), but
       // don't meaningfully shadow each other at this spacing — receiveShadow
