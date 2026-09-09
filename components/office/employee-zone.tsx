@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { Html } from "@react-three/drei"
 import type { ThreeEvent } from "@react-three/fiber"
 import type { Employee } from "@/lib/types"
@@ -66,15 +66,37 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
 
   const [pressed, setPressed] = useState(false)
 
+  // Hysteresis: a pointerOut clears the hover after a short delay instead of
+  // instantly, and any pointerOver in the meantime cancels it. This absorbs
+  // any brief on/off/on flicker in the raycast hit-test itself (e.g. the
+  // cursor resting exactly on a boundary) so it never reaches visible state
+  // — a defensive backstop independent of what's causing a given flicker,
+  // on top of removing the known-overlapping raycast targets above.
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current)
+    }
+  }, [])
+
   function handleOver(e: ThreeEvent<PointerEvent>) {
     e.stopPropagation()
+    if (clearTimer.current) {
+      clearTimeout(clearTimer.current)
+      clearTimer.current = null
+    }
     setHoveredEmployee(employee.id)
     document.body.style.cursor = "pointer"
   }
   function handleOut(e: ThreeEvent<PointerEvent>) {
     e.stopPropagation()
-    setHoveredEmployee(null)
-    document.body.style.cursor = "default"
+    if (clearTimer.current) clearTimeout(clearTimer.current)
+    clearTimer.current = setTimeout(() => {
+      setHoveredEmployee(null)
+      document.body.style.cursor = "default"
+      clearTimer.current = null
+    }, 80)
   }
   function handleClick(e: ThreeEvent<MouseEvent>) {
     e.stopPropagation()
@@ -88,7 +110,16 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
           cheaper update (touches one uniform, nothing structural about the
           material changes), which matters when every bit of per-frame cost
           counts on constrained hardware. Same visual result. */}
-      <mesh position={[0, 0.006, 0.45]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      {/* raycast disabled: this disc sits inside the invisible hitbox's volume
+          below, and — like the desk props in Workstation — has no pointer
+          handler of its own, so by default it could still win the nearest
+          raycast hit over the hitbox and flicker the hover state on/off. */}
+      <mesh
+        position={[0, 0.006, 0.45]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+        raycast={() => null}
+      >
         <circleGeometry args={[1.35, 40]} />
         <meshStandardMaterial
           color="#e2dbc9"
