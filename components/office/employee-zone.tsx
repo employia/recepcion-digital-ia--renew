@@ -158,17 +158,6 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
 
       <Workstation accent={employee.accent} surface={cfg.surface} />
 
-      {/* Discreet presence indicator floating above the avatar */}
-      <mesh position={[0, 2.05, 0]}>
-        <sphereGeometry args={[0.05, 16, 16]} />
-        <meshStandardMaterial
-          color={status.color}
-          emissive={status.color}
-          emissiveIntensity={employee.status === "working" ? 0.6 : 0.15}
-          roughness={0.4}
-        />
-      </mesh>
-
       {/* Floating label on hover — small, glassy, no large tooltip */}
       {active && (
         <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
