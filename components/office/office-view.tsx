@@ -51,12 +51,31 @@ export function OfficeView() {
   // cheaply." This means "don't render 3D here at all."
   const [contextUnavailable, setContextUnavailable] = useState(false)
 
+  // frameloop is "demand" by default (see the Canvas prop below for why:
+  // static scene, no wasted frames, saves battery/CPU on real GPUs). But on
+  // a software rasterizer (SwiftShader/llvmpipe/Mesa), "demand" is itself
+  // implicated in the hover-triggered context loss reported after the
+  // hitbox/raycast fix (6cec48a) already ruled out every render-cost and
+  // React-state path: with no frames being requested while the cursor sits
+  // idle, the browser can treat that GL context as inactive and let the
+  // (already CPU-bound, no hardware isolation) software backend reclaim it;
+  // hover is simply the first `invalidate()` after that idle stretch, so it
+  // looks like "hovering causes the crash" when the real trigger is
+  // resuming a context the browser already let go dormant. Confirmed
+  // against this exact machine: the "[office] Software WebGL renderer
+  // detected" log below DOES fire here, and DevTools reports the same
+  // software/no-hardware-acceleration GPU status as previously diagnosed —
+  // this isn't a new, different failure mode. Switching to "always" only on
+  // that detected path keeps a steady trickle of frames so the context
+  // never goes idle long enough to be reclaimed, removing the idle→wake
+  // transition entirely instead of reacting to it after the fact. Real
+  // (hardware-accelerated) GPUs are untouched and keep "demand".
+  const [frameloop, setFrameloop] = useState<"demand" | "always">("demand")
+
   const handleCreated = useCallback((state: { gl: { getContext: () => WebGLRenderingContext | WebGL2RenderingContext } }) => {
-    // Kept even with lowPower defaulting to true: a software renderer still
-    // benefits from dpr=1 and the extra ambient bump isSoftwareRenderer's
-    // downstream effects provide, and this is a cheap one-time check.
     if (isSoftwareRenderer(state.gl.getContext())) {
-      console.warn("[office] Software WebGL renderer detected")
+      console.warn("[office] Software WebGL renderer detected — forcing frameloop='always' to avoid idle-context reclaim on hover")
+      setFrameloop("always")
     }
   }, [])
 
@@ -125,12 +144,16 @@ export function OfficeView() {
           shadows={!lowPower}
           onCreated={handleCreated}
           // The scene is fully static: no useFrame/animation exists anywhere
-          // in this codebase. "always" (the default) re-renders every frame
-          // forever for nothing. "demand" only renders when something
-          // actually changes — OrbitControls invalidates on its own on
-          // zoom, and R3F auto-invalidates whenever a prop it manages
-          // changes (hover scale/color, tooltip show/hide, model load).
-          frameloop="demand"
+          // in this codebase. "always" (the default R3F behavior) re-renders
+          // every frame forever for nothing on hardware-accelerated GPUs, so
+          // "demand" is the right default — it only renders when something
+          // actually changes (OrbitControls invalidates on its own on zoom,
+          // R3F auto-invalidates whenever a prop it manages changes: hover
+          // scale/color, tooltip show/hide, model load). handleCreated above
+          // flips this to "always" specifically when a software renderer is
+          // detected, to prevent the idle-context-reclaim failure described
+          // there — hardware GPUs are unaffected and keep "demand".
+          frameloop={frameloop}
           // 1.5 instead of 2: on high-density (retina/4K) screens, dpr 2
           // roughly doubles pixel count vs 1.5 for a difference that isn't
           // perceptible at this isometric scale, while meaningfully cutting
