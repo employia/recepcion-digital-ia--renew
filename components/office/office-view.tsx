@@ -68,16 +68,16 @@ export function OfficeView() {
   const recentLossesRef = useRef<number[]>([])
   const handleContextLost = useCallback(() => {
     const now = Date.now()
-    const recent = recentLossesRef.current.filter((t) => now - t < 8000)
+    const recent = recentLossesRef.current.filter((t) => now - t < 10000)
     recent.push(now)
     recentLossesRef.current = recent
-    console.warn(`[office] Context lost (${recent.length} time(s) in the last 8s)`)
-    // 2+ losses in 8s is the same pattern that makes Chrome/Edge itself stop
+    console.warn(`[office] Context lost (${recent.length} time(s) in the last 10s)`)
+    // 3+ losses in 10s is the pattern that makes Chrome/Edge itself stop
     // granting new contexts ("Web page caused context loss and was
     // blocked"). Once we see it, stop asking: unmounting the Canvas is a
     // choice we make on purpose, instead of the browser making it for us
     // mid-render and leaving a dead/errored canvas on screen.
-    if (recent.length >= 2) {
+    if (recent.length >= 3) {
       setContextUnavailable(true)
     }
   }, [])
