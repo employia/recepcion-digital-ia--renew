@@ -51,31 +51,32 @@ export function OfficeView() {
   // cheaply." This means "don't render 3D here at all."
   const [contextUnavailable, setContextUnavailable] = useState(false)
 
-  // frameloop is "demand" by default (see the Canvas prop below for why:
-  // static scene, no wasted frames, saves battery/CPU on real GPUs). But on
-  // a software rasterizer (SwiftShader/llvmpipe/Mesa), "demand" is itself
-  // implicated in the hover-triggered context loss reported after the
-  // hitbox/raycast fix (6cec48a) already ruled out every render-cost and
-  // React-state path: with no frames being requested while the cursor sits
-  // idle, the browser can treat that GL context as inactive and let the
-  // (already CPU-bound, no hardware isolation) software backend reclaim it;
-  // hover is simply the first `invalidate()` after that idle stretch, so it
-  // looks like "hovering causes the crash" when the real trigger is
-  // resuming a context the browser already let go dormant. Confirmed
-  // against this exact machine: the "[office] Software WebGL renderer
-  // detected" log below DOES fire here, and DevTools reports the same
-  // software/no-hardware-acceleration GPU status as previously diagnosed —
-  // this isn't a new, different failure mode. Switching to "always" only on
-  // that detected path keeps a steady trickle of frames so the context
-  // never goes idle long enough to be reclaimed, removing the idle→wake
-  // transition entirely instead of reacting to it after the fact. Real
-  // (hardware-accelerated) GPUs are untouched and keep "demand".
-  const [frameloop, setFrameloop] = useState<"demand" | "always">("demand")
+  // frameloop is unconditionally "always" (Sept 2026, production incident:
+  // full office canvas going blank on Vercel while sidebar/module bar —
+  // regular DOM, unaffected — stayed up). Previously this was "demand" by
+  // default, switching to "always" only when handleCreated's
+  // isSoftwareRenderer() check fired: with "demand" and no frames being
+  // requested while the cursor sits idle, the browser can treat that GL
+  // context as inactive and reclaim it; the first `invalidate()` after that
+  // idle stretch (e.g. a hover) then looks like "interacting causes the
+  // crash" when the real trigger is resuming a context the browser already
+  // let go dormant. That conditional fix only helps when detection
+  // succeeds — isSoftwareRenderer() itself depends on the
+  // WEBGL_debug_renderer_info extension, which several browsers restrict or
+  // omit depending on privacy settings, GPU driver, or OS, independent of
+  // whether the renderer is actually weak. A production report of the exact
+  // idle-reclaim symptom with no matching "[office] Software WebGL renderer
+  // detected" log would mean detection silently failed and the fragile path
+  // never engaged. Rather than harden the detection further, frameloop just
+  // stays "always" from the start: on this static scene (no useFrame
+  // animation anywhere) the cost is a steady trickle of otherwise-idle
+  // frames, which is cheap next to the office going blank in front of a
+  // client. isSoftwareRenderer() is kept below purely as a diagnostic log.
+  const frameloop = "always" as const
 
   const handleCreated = useCallback((state: { gl: { getContext: () => WebGLRenderingContext | WebGL2RenderingContext } }) => {
     if (isSoftwareRenderer(state.gl.getContext())) {
-      console.warn("[office] Software WebGL renderer detected — forcing frameloop='always' to avoid idle-context reclaim on hover")
-      setFrameloop("always")
+      console.warn("[office] Software WebGL renderer detected (frameloop is already 'always', no action needed)")
     }
   }, [])
 
