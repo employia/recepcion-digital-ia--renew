@@ -158,10 +158,21 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
 
       <Workstation accent={employee.accent} surface={cfg.surface} />
 
-      {/* Floating label on hover — small, glassy, no large tooltip */}
+      {/* Floating label on hover — small, no large tooltip.
+          NOTE: this used to be `bg-white/80 backdrop-blur-md` ("glassy").
+          Removed backdrop-blur-md: with frameloop="always", drei's <Html>
+          rewrites this div's CSS transform every single frame (~60/s) even
+          though the position never changes while hovering. A backdrop-filter
+          element under a continuously-rewritten transform is a known
+          Chromium/Firefox compositor flicker pattern — the browser has to
+          re-sample and re-blur the backdrop on every repaint, independent of
+          GPU/hardware, which is why it reproduced identically on a second
+          machine (a rendering-engine bug, not a context-loss/GPU issue like
+          the WebGL saga above). Bumped bg opacity to /95 (near-solid) to keep
+          the same visual weight without the blur. */}
       {active && (
         <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
-          <div className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/80 px-3 py-1.5 text-center shadow-soft backdrop-blur-md">
+          <div className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft">
             <div className="text-[13px] font-semibold leading-tight text-neutral-800">
               {employee.name}
             </div>
