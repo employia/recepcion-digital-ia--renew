@@ -11,46 +11,23 @@ interface WorkstationProps {
 }
 
 /**
- * Desk peripherals only: a small document stack with an accent tab. The
- * desk, legs, chair — and monitor, keyboard and mouse, in the fused GLB
- * models that already include them — come from the fused GLB model, so
- * separate procedural monitor/keyboard/mouse are intentionally NOT drawn
- * here (they were floating/misaligned relative to each model's real desk
- * surface — same issue, same fix already applied to the monitor). Everything
- * is positioned relative to `surface` (the desk-top center of the current
- * model).
+ * No procedural desk peripherals are drawn here anymore. The desk, legs,
+ * chair, monitor, keyboard and mouse all come from each fused GLB model,
+ * which already includes a full, model-specific set of desk props (phone,
+ * notepad, plant, lamp — see each employee's actual model). Every
+ * procedural addition tried here (monitor, then keyboard/mouse, then this
+ * document stack) hit the same failure mode: it renders relative to
+ * `surface`, a hand-tuned per-model guess at the desk-top origin, and
+ * — critically — it renders immediately, before the GLB (loaded async via
+ * Suspense) has streamed in. So on first paint it floats with nothing
+ * under it, and once the real desk geometry loads, any surface-height
+ * mismatch leaves it clipping through the desk's front panel instead of
+ * sitting flush on top (confirmed visually on Valentina's desk). Kept as a
+ * no-op stub, not deleted outright, so `surface` tuning and the call site
+ * in EmployeeZone don't need to change if a future prop is added here —
+ * any new addition should be baked into the GLB itself instead of drawn
+ * procedurally against a guessed `surface` origin.
  */
-export function Workstation({ accent, surface = [0, 0.72, 0.82] }: WorkstationProps) {
-  // Every mesh here sits physically inside EmployeeZone's invisible hover
-  // hitbox (the box wraps the whole seated figure, desk-top and all). This
-  // prop has no pointer handler of its own, but by default every mesh still
-  // participates in raycasting — so whenever the cursor lands on a pixel
-  // where the document stack happens to be the nearest hit, it silently
-  // wins over the hitbox behind it and the "hover" turns off, then back on
-  // the instant the ray clears it again. With a mouse that's never
-  // perfectly still (OS-level sub-pixel jitter), that's a hover on/off/on
-  // flicker every time the cursor rests near this prop — exactly the
-  // "avatars flicker on hover" symptom, and independent of GPU or renderer,
-  // since it's a hit-testing order issue, not a rendering one. Disabling
-  // raycast on it (same treatment already applied to the avatar model
-  // itself in person.tsx, for the same class of problem) removes it from
-  // hit-testing entirely, leaving the fixed hitbox as the sole, stable
-  // interactive surface.
-  const noRaycast = () => null
-
-  return (
-    <group position={surface}>
-      {/* Small desk object: a short stack of documents with an accent tab */}
-      <group position={[-0.48, 0.04, 0.08]}>
-        <mesh castShadow raycast={noRaycast}>
-          <boxGeometry args={[0.16, 0.05, 0.22]} />
-          <meshStandardMaterial color="#f3f1ea" roughness={0.7} />
-        </mesh>
-        <mesh position={[0.05, 0.03, 0]} raycast={noRaycast}>
-          <boxGeometry args={[0.05, 0.008, 0.22]} />
-          <meshStandardMaterial color={accent} roughness={0.6} />
-        </mesh>
-      </group>
-    </group>
-  )
+export function Workstation(_props: WorkstationProps) {
+  return null
 }
