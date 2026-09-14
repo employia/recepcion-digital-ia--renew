@@ -131,30 +131,38 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
         />
       </mesh>
 
-      {/* Interactive hit target wrapping the fused model */}
-      <group
+      {/* The avatar is purely visual: no pointer handlers anywhere on it or
+          on its wrapping group. Interaction is owned entirely by the
+          invisible hitbox mesh below — a single, independent object whose
+          geometry/position never changes with `active`, so hover/click
+          detection can never be perturbed by anything the avatar does
+          visually (this used to be a shared group with handlers on it,
+          which meant hover state and avatar rendering lived in the same
+          event-propagation path even though the avatar itself already had
+          raycast disabled). */}
+      <group>
+        <AvatarErrorBoundary employeeId={employee.id} fallback={<AvatarFallback accent={employee.accent} />}>
+          <Suspense fallback={null}>
+            <EmployeeModel model={employee.model} targetHeight={cfg.targetHeight} rotationY={cfg.rotationY} />
+          </Suspense>
+        </AvatarErrorBoundary>
+      </group>
+
+      {/* Sole owner of hover/click detection. Fixed size and position,
+          independent of `active` — nothing about this mesh ever changes as
+          a result of being hovered. */}
+      <mesh
+        position={[0, 0.9, 0.2]}
+        visible={false}
         onPointerOver={handleOver}
         onPointerOut={handleOut}
         onPointerDown={() => setPressed(true)}
         onPointerUp={() => setPressed(false)}
         onClick={handleClick}
       >
-        <AvatarErrorBoundary employeeId={employee.id} fallback={<AvatarFallback accent={employee.accent} />}>
-          <Suspense fallback={null}>
-            <EmployeeModel
-              model={employee.model}
-              targetHeight={cfg.targetHeight}
-              rotationY={cfg.rotationY}
-              active={active}
-            />
-          </Suspense>
-        </AvatarErrorBoundary>
-        {/* invisible larger hitbox so hovering is forgiving */}
-        <mesh position={[0, 0.9, 0.2]} visible={false}>
-          <boxGeometry args={[1.6, 1.9, 1.6]} />
-          <meshBasicMaterial />
-        </mesh>
-      </group>
+        <boxGeometry args={[1.6, 1.9, 1.6]} />
+        <meshBasicMaterial />
+      </mesh>
 
       <Workstation accent={employee.accent} surface={cfg.surface} />
 
@@ -170,26 +178,36 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
           machine (a rendering-engine bug, not a context-loss/GPU issue like
           the WebGL saga above). Bumped bg opacity to /95 (near-solid) to keep
           the same visual weight without the blur. */}
-      {active && (
-        <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
-          <div className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft">
-            <div className="text-[13px] font-semibold leading-tight text-neutral-800">
-              {employee.name}
-            </div>
-            <div className="text-[11px] leading-tight text-neutral-500">{employee.role}</div>
-            <div className="mt-1 flex items-center justify-center gap-1.5">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: status.color }}
-                aria-hidden
-              />
-              <span className="text-[10px] font-medium leading-tight text-neutral-600">
-                {status.label}
-              </span>
-            </div>
+      {/* Always mounted (not conditionally rendered on `active`), visibility
+          toggled purely via CSS opacity. Confirmed root causes of the office
+          flicker (see git history: raycast contention, WebGL context loss,
+          backdrop-filter-under-rewritten-transform) never involved this
+          mount/unmount cycle, but repeatedly creating/destroying a drei
+          <Html> DOM portal on every hover transition is unnecessary
+          per-frame churn with no upside, so it's removed as a matter of
+          architecture even though it wasn't the confirmed cause. */}
+      <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
+        <div
+          className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft transition-opacity duration-100"
+          style={{ opacity: active ? 1 : 0 }}
+          aria-hidden={!active}
+        >
+          <div className="text-[13px] font-semibold leading-tight text-neutral-800">
+            {employee.name}
           </div>
-        </Html>
-      )}
+          <div className="text-[11px] leading-tight text-neutral-500">{employee.role}</div>
+          <div className="mt-1 flex items-center justify-center gap-1.5">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: status.color }}
+              aria-hidden
+            />
+            <span className="text-[10px] font-medium leading-tight text-neutral-600">
+              {status.label}
+            </span>
+          </div>
+        </div>
+      </Html>
 
       {/* subtle press feedback ring */}
       {pressed && (

@@ -12,8 +12,6 @@ interface EmployeeModelProps {
   targetHeight?: number
   /** Extra Y rotation (radians) to orient the model's desk toward the room center. */
   rotationY?: number
-  /** Whether this employee is currently highlighted. */
-  active?: boolean
 }
 
 /**
@@ -26,7 +24,6 @@ export function EmployeeModel({
   model,
   targetHeight = 1.9,
   rotationY = 0,
-  active = false,
 }: EmployeeModelProps) {
   const { scene } = useGLTF(model)
 
@@ -48,17 +45,17 @@ export function EmployeeModel({
       // on every submesh (hair, buttons, accessories) doubled the shadow-pass
       // mesh count on all four avatars for no visible difference.
       child.castShadow = true
-      // This model must NOT be part of hover raycasting. EmployeeZone
-      // already has a stable, fixed-size invisible hitbox for that. If the
-      // avatar's own geometry also receives pointer events, a feedback loop
-      // appears: hovering scales this exact model up 1% (see the group
-      // below) -> its silhouette shifts under the cursor -> the raycaster
-      // can lose the intersection -> pointerOut fires -> it scales back
-      // down -> the cursor is back inside -> pointerOver fires again ->
-      // repeat, every render. That's the "office flickers when I hover an
-      // employee" bug. Disabling raycast on every submesh here removes the
-      // model entirely from hit-testing, so only the fixed hitbox — which
-      // never changes size — drives hover/click.
+      // This model must NOT be part of hover raycasting, and it must not
+      // change shape/scale/position as a consequence of hover either — see
+      // EmployeeZone, which owns hover/click exclusively via its own fixed
+      // hitbox mesh. The avatar is purely visual: nothing here reads
+      // `active` or any hover-derived state, so there is no path by which
+      // hovering can alter this object's geometry, silhouette, or bounding
+      // box. Disabling raycast on every submesh additionally removes the
+      // model from hit-testing entirely, so only the hitbox drives
+      // hover/click — two independent safeguards against the same class of
+      // feedback loop (avatar reacting to hover -> raycast intersection
+      // shifts -> hover flickers on/off).
       child.raycast = () => null
     })
     const box = new Box3().setFromObject(object)
@@ -75,7 +72,7 @@ export function EmployeeModel({
   }, [scene, targetHeight])
 
   return (
-    <group rotation={[0, rotationY, 0]} scale={active ? scale * 1.01 : scale}>
+    <group rotation={[0, rotationY, 0]} scale={scale}>
       <group position={[offset.x, offset.y, offset.z]}>
         <primitive object={object} />
       </group>
