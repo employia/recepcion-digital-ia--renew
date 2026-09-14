@@ -148,21 +148,29 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
         </AvatarErrorBoundary>
       </group>
 
-      {/* Sole owner of hover/click detection. Fixed size and position,
-          independent of `active` — nothing about this mesh ever changes as
-          a result of being hovered. */}
-      <mesh
-        position={[0, 0.9, 0.2]}
-        visible={false}
+      {/* Sole owner of hover/click detection: an independent group whose
+          only child is the fixed-size invisible hitbox mesh. Kept as
+          group+mesh (handlers on the group, not the mesh) rather than
+          handlers directly on the mesh — R3F's event bubbling starts from
+          the raycast hit and climbs parents looking for the nearest one
+          with handlers attached, and this is the arrangement already
+          proven to fire clicks reliably in this scene. What matters
+          architecturally is that this group's ONLY descendant is the
+          hitbox — the avatar lives in a completely separate group above
+          with no handlers of its own, so nothing about detection can be
+          perturbed by the avatar's rendering. */}
+      <group
         onPointerOver={handleOver}
         onPointerOut={handleOut}
         onPointerDown={() => setPressed(true)}
         onPointerUp={() => setPressed(false)}
         onClick={handleClick}
       >
-        <boxGeometry args={[1.6, 1.9, 1.6]} />
-        <meshBasicMaterial />
-      </mesh>
+        <mesh position={[0, 0.9, 0.2]} visible={false}>
+          <boxGeometry args={[1.6, 1.9, 1.6]} />
+          <meshBasicMaterial />
+        </mesh>
+      </group>
 
       <Workstation accent={employee.accent} surface={cfg.surface} />
 
@@ -186,7 +194,13 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
           <Html> DOM portal on every hover transition is unnecessary
           per-frame churn with no upside, so it's removed as a matter of
           architecture even though it wasn't the confirmed cause. */}
-      <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
+      <Html
+        position={[0, 2.25, 0]}
+        center
+        distanceFactor={7}
+        zIndexRange={[20, 0]}
+        style={{ pointerEvents: "none" }}
+      >
         <div
           className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft transition-opacity duration-100"
           style={{ opacity: active ? 1 : 0 }}
