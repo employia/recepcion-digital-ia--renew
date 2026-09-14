@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useRef } from "react"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { Loader2 } from "lucide-react"
@@ -46,10 +46,6 @@ export function OfficeView() {
   // there's no setter to call. Kept as a named constant (not inlined below)
   // so every prop that reads it below stays self-documenting about why.
   const lowPower = true
-  // Set once the browser definitively refuses to (re)create a WebGL context
-  // for this canvas — distinct from lowPower, which just means "render
-  // cheaply." This means "don't render 3D here at all."
-  const [contextUnavailable, setContextUnavailable] = useState(false)
 
   // frameloop is unconditionally "always" (Sept 2026, production incident:
   // full office canvas going blank on Vercel while sidebar/module bar —
@@ -92,14 +88,6 @@ export function OfficeView() {
     recent.push(now)
     recentLossesRef.current = recent
     console.warn(`[office] Context lost (${recent.length} time(s) in the last 10s)`)
-    // 3+ losses in 10s is the pattern that makes Chrome/Edge itself stop
-    // granting new contexts ("Web page caused context loss and was
-    // blocked"). Once we see it, stop asking: unmounting the Canvas is a
-    // choice we make on purpose, instead of the browser making it for us
-    // mid-render and leaving a dead/errored canvas on screen.
-    if (recent.length >= 3) {
-      setContextUnavailable(true)
-    }
   }, [])
 
   // Covers the case from the Sept 2026 Edge log, distinct from
@@ -114,26 +102,11 @@ export function OfficeView() {
       const message = String(event.reason?.message ?? event.reason ?? "")
       if (message.includes("WebGL context") || message.includes("WebGLRenderer")) {
         console.warn("[office] Unrecoverable WebGL context creation failure:", message)
-        setContextUnavailable(true)
       }
     }
     window.addEventListener("unhandledrejection", handleRejection)
     return () => window.removeEventListener("unhandledrejection", handleRejection)
   }, [])
-
-  if (contextUnavailable) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center bg-background">
-        <div className="flex max-w-xs flex-col items-center gap-2 text-center text-muted-foreground">
-          <p className="text-sm font-medium text-foreground">La oficina 3D no cargó en este dispositivo</p>
-          <p className="text-xs">
-            El navegador bloqueó la creación del contexto gráfico tras varios intentos fallidos. Recargar la página
-            a veces lo resuelve; si persiste, es este equipo/navegador el que no lo soporta.
-          </p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="absolute inset-0">
