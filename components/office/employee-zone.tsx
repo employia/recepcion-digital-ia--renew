@@ -1,16 +1,15 @@
 "use client"
 
-import { Suspense, useEffect, useRef, useState } from "react"
-import { Html } from "@react-three/drei"
+import { Suspense } from "react"
 import type { ThreeEvent } from "@react-three/fiber"
 import type { Employee } from "@/lib/types"
-import { useApp, useHover } from "@/lib/store"
+import { useApp } from "@/lib/store"
 import { EmployeeModel } from "./person"
 import { Workstation } from "./workstation"
 import { AvatarErrorBoundary } from "./avatar-error-boundary"
 
 /** Simple stand-in silhouette shown if an employee's GLB fails to load, so
- * the desk/hitbox/label still work and the rest of the office is unaffected. */
+ * the desk/hitbox still work and the rest of the office is unaffected. */
 function AvatarFallback({ accent }: { accent: string }) {
   return (
     <group position={[0, 0, 0.15]}>
@@ -45,59 +44,33 @@ const CONFIG_BY_ID: Record<string, ModelConfig> = {
   steven: { targetHeight: 1.95, rotationY: 0, surface: [0, 0.75, 0.47] },
 }
 
-const STATUS_META = {
-  working: { color: "#3fb950", label: "Trabajando" },
-  resting: { color: "#b7b1a3", label: "Descansando" },
-} as const
-
+/**
+ * NOTE: this component used to have a full hover subsystem — hoveredEmployee
+ * state, a floating <Html> name/role tooltip, a hitbox-forgiving hysteresis
+ * timer, and a rug highlight — all removed on explicit request after
+ * repeated flicker/canvas-gray-out regressions traced back to that hover
+ * machinery (raycast contention, WebGL context loss under frameloop
+ * "always", backdrop-filter under a rewritten transform, and permanent
+ * per-frame DOM cost from an always-mounted tooltip — see git history on
+ * this file and person.tsx for the full chronology). There is now
+ * intentionally no hover state anywhere in this component: no
+ * onPointerOver/onPointerOut, no useState/useEffect for it, no <Html>. The
+ * only interaction is click -> open the employee's module. If hover
+ * feedback is wanted again in the future, it needs a fresh, deliberately
+ * conservative design (e.g. a static always-rendered indicator with no
+ * per-frame DOM work), not a re-add of what was here before.
+ */
 export function EmployeeZone({ employee, index }: { employee: Employee; index: number }) {
   const { openModule } = useApp()
-  const { hoveredEmployee, setHoveredEmployee } = useHover()
   const [x, z] = employee.station
   // Orient the whole station so the seated employee faces the room center.
   const rotationY = Math.atan2(-x, -z)
-  const active = hoveredEmployee === employee.id
   const cfg = CONFIG_BY_ID[employee.id] ?? {
     targetHeight: 1.95,
     rotationY: 0,
     surface: [0, 0.74, 0.62] as [number, number, number],
   }
-  const status = STATUS_META[employee.status]
 
-  const [pressed, setPressed] = useState(false)
-
-  // Hysteresis: a pointerOut clears the hover after a short delay instead of
-  // instantly, and any pointerOver in the meantime cancels it. This absorbs
-  // any brief on/off/on flicker in the raycast hit-test itself (e.g. the
-  // cursor resting exactly on a boundary) so it never reaches visible state
-  // — a defensive backstop independent of what's causing a given flicker,
-  // on top of removing the known-overlapping raycast targets above.
-  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (clearTimer.current) clearTimeout(clearTimer.current)
-    }
-  }, [])
-
-  function handleOver(e: ThreeEvent<PointerEvent>) {
-    e.stopPropagation()
-    if (clearTimer.current) {
-      clearTimeout(clearTimer.current)
-      clearTimer.current = null
-    }
-    setHoveredEmployee(employee.id)
-    document.body.style.cursor = "pointer"
-  }
-  function handleOut(e: ThreeEvent<PointerEvent>) {
-    e.stopPropagation()
-    if (clearTimer.current) clearTimeout(clearTimer.current)
-    clearTimer.current = setTimeout(() => {
-      setHoveredEmployee(null)
-      document.body.style.cursor = "default"
-      clearTimer.current = null
-    }, 80)
-  }
   function handleClick(e: ThreeEvent<MouseEvent>) {
     e.stopPropagation()
     openModule(employee.module)
@@ -105,15 +78,7 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
 
   return (
     <group position={[x, 0, z]} rotation={[0, rotationY, 0]}>
-      {/* Soft zone rug to ground each workstation. Toggling emissiveIntensity
-          instead of swapping the base `color` on hover: it's a strictly
-          cheaper update (touches one uniform, nothing structural about the
-          material changes), which matters when every bit of per-frame cost
-          counts on constrained hardware. Same visual result. */}
-      {/* raycast disabled: this disc sits inside the invisible hitbox's volume
-          below, and — like the desk props in Workstation — has no pointer
-          handler of its own, so by default it could still win the nearest
-          raycast hit over the hitbox and flicker the hover state on/off. */}
+      {/* Static zone rug, no hover-reactive material property. */}
       <mesh
         position={[0, 0.006, 0.45]}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -121,25 +86,12 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
         raycast={() => null}
       >
         <circleGeometry args={[1.35, 40]} />
-        <meshStandardMaterial
-          color="#e2dbc9"
-          emissive="#e9e2d2"
-          emissiveIntensity={active ? 0.5 : 0}
-          roughness={0.95}
-          transparent
-          opacity={0.9}
-        />
+        <meshStandardMaterial color="#e2dbc9" roughness={0.95} transparent opacity={0.9} />
       </mesh>
 
       {/* The avatar is purely visual: no pointer handlers anywhere on it or
           on its wrapping group. Interaction is owned entirely by the
-          invisible hitbox mesh below — a single, independent object whose
-          geometry/position never changes with `active`, so hover/click
-          detection can never be perturbed by anything the avatar does
-          visually (this used to be a shared group with handlers on it,
-          which meant hover state and avatar rendering lived in the same
-          event-propagation path even though the avatar itself already had
-          raycast disabled). */}
+          invisible hitbox mesh below. */}
       <group>
         <AvatarErrorBoundary employeeId={employee.id} fallback={<AvatarFallback accent={employee.accent} />}>
           <Suspense fallback={null}>
@@ -148,24 +100,10 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
         </AvatarErrorBoundary>
       </group>
 
-      {/* Sole owner of hover/click detection: an independent group whose
-          only child is the fixed-size invisible hitbox mesh. Kept as
-          group+mesh (handlers on the group, not the mesh) rather than
-          handlers directly on the mesh — R3F's event bubbling starts from
-          the raycast hit and climbs parents looking for the nearest one
-          with handlers attached, and this is the arrangement already
-          proven to fire clicks reliably in this scene. What matters
-          architecturally is that this group's ONLY descendant is the
-          hitbox — the avatar lives in a completely separate group above
-          with no handlers of its own, so nothing about detection can be
-          perturbed by the avatar's rendering. */}
-      <group
-        onPointerOver={handleOver}
-        onPointerOut={handleOut}
-        onPointerDown={() => setPressed(true)}
-        onPointerUp={() => setPressed(false)}
-        onClick={handleClick}
-      >
+      {/* Sole owner of interaction: an independent group whose only child is
+          the fixed-size invisible hitbox mesh. Click only — no hover
+          handlers of any kind. */}
+      <group onClick={handleClick}>
         <mesh position={[0, 0.9, 0.2]} visible={false}>
           <boxGeometry args={[1.6, 1.9, 1.6]} />
           <meshBasicMaterial />
@@ -173,62 +111,6 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
       </group>
 
       <Workstation accent={employee.accent} surface={cfg.surface} />
-
-      {/* Floating label on hover — small, no large tooltip.
-          NOTE: this used to be `bg-white/80 backdrop-blur-md` ("glassy").
-          Removed backdrop-blur-md: with frameloop="always", drei's <Html>
-          rewrites this div's CSS transform every single frame (~60/s) even
-          though the position never changes while hovering. A backdrop-filter
-          element under a continuously-rewritten transform is a known
-          Chromium/Firefox compositor flicker pattern — the browser has to
-          re-sample and re-blur the backdrop on every repaint, independent of
-          GPU/hardware, which is why it reproduced identically on a second
-          machine (a rendering-engine bug, not a context-loss/GPU issue like
-          the WebGL saga above). Bumped bg opacity to /95 (near-solid) to keep
-          the same visual weight without the blur. */}
-      {/* Conditionally mounted on `active` (one at a time, at most), NOT
-          always-mounted. A prior version of this component made all four
-          employees' <Html> permanently mounted, each running its own
-          per-frame position/CSS update via drei's internals regardless of
-          hover state. On the constrained/software-rendered hardware this
-          office already has to defend against (see the WebGL saga above —
-          frameloop must run "always" on that hardware, and it's already
-          borderline on rasterizer cost), quadrupling that permanent
-          per-frame DOM/CSS work reproduced the exact same symptom as the
-          original context-loss bug: the canvas goes white/gray, worse
-          while the cursor moves, recovers when it's still. Reverted to
-          mounting only the hovered employee's tooltip — the mount/unmount
-          churn this reintroduces was never a confirmed cause of anything,
-          whereas permanent per-frame cost across 4 elements demonstrably
-          is, on this hardware. */}
-      {active && (
-        <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
-          <div className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft">
-            <div className="text-[13px] font-semibold leading-tight text-neutral-800">
-              {employee.name}
-            </div>
-            <div className="text-[11px] leading-tight text-neutral-500">{employee.role}</div>
-            <div className="mt-1 flex items-center justify-center gap-1.5">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: status.color }}
-                aria-hidden
-              />
-              <span className="text-[10px] font-medium leading-tight text-neutral-600">
-                {status.label}
-              </span>
-            </div>
-          </div>
-        </Html>
-      )}
-
-      {/* subtle press feedback ring */}
-      {pressed && (
-        <mesh position={[0, 0.02, 0.45]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.3, 1.4, 48]} />
-          <meshBasicMaterial color={employee.accent} transparent opacity={0.5} />
-        </mesh>
-      )}
     </group>
   )
 }
