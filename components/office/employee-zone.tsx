@@ -186,42 +186,41 @@ export function EmployeeZone({ employee, index }: { employee: Employee; index: n
           machine (a rendering-engine bug, not a context-loss/GPU issue like
           the WebGL saga above). Bumped bg opacity to /95 (near-solid) to keep
           the same visual weight without the blur. */}
-      {/* Always mounted (not conditionally rendered on `active`), visibility
-          toggled purely via CSS opacity. Confirmed root causes of the office
-          flicker (see git history: raycast contention, WebGL context loss,
-          backdrop-filter-under-rewritten-transform) never involved this
-          mount/unmount cycle, but repeatedly creating/destroying a drei
-          <Html> DOM portal on every hover transition is unnecessary
-          per-frame churn with no upside, so it's removed as a matter of
-          architecture even though it wasn't the confirmed cause. */}
-      <Html
-        position={[0, 2.25, 0]}
-        center
-        distanceFactor={7}
-        zIndexRange={[20, 0]}
-        style={{ pointerEvents: "none" }}
-      >
-        <div
-          className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft transition-opacity duration-100"
-          style={{ opacity: active ? 1 : 0 }}
-          aria-hidden={!active}
-        >
-          <div className="text-[13px] font-semibold leading-tight text-neutral-800">
-            {employee.name}
+      {/* Conditionally mounted on `active` (one at a time, at most), NOT
+          always-mounted. A prior version of this component made all four
+          employees' <Html> permanently mounted, each running its own
+          per-frame position/CSS update via drei's internals regardless of
+          hover state. On the constrained/software-rendered hardware this
+          office already has to defend against (see the WebGL saga above —
+          frameloop must run "always" on that hardware, and it's already
+          borderline on rasterizer cost), quadrupling that permanent
+          per-frame DOM/CSS work reproduced the exact same symptom as the
+          original context-loss bug: the canvas goes white/gray, worse
+          while the cursor moves, recovers when it's still. Reverted to
+          mounting only the hovered employee's tooltip — the mount/unmount
+          churn this reintroduces was never a confirmed cause of anything,
+          whereas permanent per-frame cost across 4 elements demonstrably
+          is, on this hardware. */}
+      {active && (
+        <Html position={[0, 2.25, 0]} center distanceFactor={7} zIndexRange={[20, 0]}>
+          <div className="pointer-events-none -translate-y-2 select-none whitespace-nowrap rounded-xl border border-white/40 bg-white/95 px-3 py-1.5 text-center shadow-soft">
+            <div className="text-[13px] font-semibold leading-tight text-neutral-800">
+              {employee.name}
+            </div>
+            <div className="text-[11px] leading-tight text-neutral-500">{employee.role}</div>
+            <div className="mt-1 flex items-center justify-center gap-1.5">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: status.color }}
+                aria-hidden
+              />
+              <span className="text-[10px] font-medium leading-tight text-neutral-600">
+                {status.label}
+              </span>
+            </div>
           </div>
-          <div className="text-[11px] leading-tight text-neutral-500">{employee.role}</div>
-          <div className="mt-1 flex items-center justify-center gap-1.5">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: status.color }}
-              aria-hidden
-            />
-            <span className="text-[10px] font-medium leading-tight text-neutral-600">
-              {status.label}
-            </span>
-          </div>
-        </div>
-      </Html>
+        </Html>
+      )}
 
       {/* subtle press feedback ring */}
       {pressed && (
